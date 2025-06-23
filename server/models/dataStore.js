@@ -16,13 +16,13 @@ class DataStore {
       homeBase: partnerData.startLocation,
       status: 'AVAILABLE', // AVAILABLE, ASSIGNED
       maxPackages: parseInt(process.env.MAX_PACKAGES_PER_PARTNER) || 5,
-      maxDeliveryTime: (parseInt(process.env.MAX_DELIVERY_TIME_MINUTES) || 30) * 60, // 30 minutes in seconds
-      maxWorkingTime: (parseInt(process.env.MAX_PARTNER_WORKING_TIME_MINUTES) || 30) * 60, // 30 minutes in seconds
+      maxDeliveryTime: (parseInt(process.env.MAX_DELIVERY_TIME_MINUTES) || 30) * 60, // 30 minutes in seconds - FIXED
+      maxWorkingTime: (parseInt(process.env.MAX_PARTNER_WORKING_TIME_MINUTES) || 30) * 60, // 30 minutes in seconds - FIXED
       createdAt: new Date()
     };
     this.partners.push(partner);
     return partner;
-  }
+  }  
 
   getPartners() {
     return this.partners;

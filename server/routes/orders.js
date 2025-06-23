@@ -72,7 +72,7 @@ router.post('/auto-assign', async (req, res) => {
       console.log(`\n🔍 Evaluating partner: ${partner.name}`);
       
       // Find best combination of orders for this partner within constraints
-      const bestCombination = await this.findBestOrderCombination(partner, remainingOrders);
+      const bestCombination = await router.findBestOrderCombination(partner, remainingOrders);
       
       if (bestCombination.orders.length > 0) {
         console.log(`✅ Assigning ${bestCombination.orders.length} orders to ${partner.name} (${bestCombination.totalPackages}/${partner.maxPackages} packages, ~${Math.round(bestCombination.estimatedTime/60)} min)`);
@@ -165,7 +165,7 @@ router.findBestOrderCombination = async function(partner, availableOrders) {
 
   // Try different combinations of orders, starting with single orders
   for (let orderCount = 1; orderCount <= Math.min(availableOrders.length, 3); orderCount++) {
-    const combinations = this.getCombinations(availableOrders, orderCount);
+    const combinations = router.getCombinations(availableOrders, orderCount);
     
     for (const combination of combinations) {
       const totalPackages = combination.reduce((sum, order) => sum + order.packageCount, 0);
@@ -199,7 +199,7 @@ router.getCombinations = function(array, size) {
   const combinations = [];
   for (let i = 0; i <= array.length - size; i++) {
     const head = array[i];
-    const tailCombinations = this.getCombinations(array.slice(i + 1), size - 1);
+    const tailCombinations = router.getCombinations(array.slice(i + 1), size - 1);
     for (const tail of tailCombinations) {
       combinations.push([head, ...tail]);
     }

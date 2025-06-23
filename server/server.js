@@ -41,21 +41,21 @@ app.get('/api/health', (req, res) => {
 
 // System info endpoint
 app.get('/api/system/info', (req, res) => {
-  const stats = dataStore.getStats();
-  
-  res.json({
-    success: true,
-    data: {
-      ...stats,
-      constraints: {
-        maxPackagesPerPartner: 5,
-        maxDeliveryTimeMinutes: 60,
-        algorithmUsed: 'Dijkstra\'s Algorithm'
-      },
-      googleMapsEnabled: !!process.env.GOOGLE_MAPS_API_KEY
-    }
-  });
-});
+    const stats = dataStore.getStats();
+    
+    res.json({
+      success: true,
+      data: {
+        ...stats,
+        constraints: {
+          maxPackagesPerPartner: 5,
+          maxDeliveryTimeMinutes: 30, // FIXED: Changed from 60 to 30
+          algorithmUsed: 'Dijkstra\'s Algorithm'
+        },
+        googleMapsEnabled: !!process.env.GOOGLE_MAPS_API_KEY
+      }
+    });
+  });  
 
 // Initialize demo data endpoint with EXACT coordinates
 app.post('/api/system/init-demo', async (req, res) => {
