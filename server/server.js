@@ -105,8 +105,8 @@ app.post('/api/system/init-demo', async (req, res) => {
     // Add sample orders
     const sampleOrders = [
       {
-        restaurantAddress: 'Restaurant A - Koramangala (12.854277, 77.657815)',
-        customerAddress: 'Customer 1 - BTM Layout (12.850616, 77.647665)',
+        restaurantAddress: 'Restaurant A - (12.854277, 77.657815)',
+        customerAddress: 'Customer 1 - (12.850616, 77.647665)',
         exactRestaurantLocation: {
           lat: 12.854277,
           lng: 77.657815
@@ -119,8 +119,8 @@ app.post('/api/system/init-demo', async (req, res) => {
         specialInstructions: 'Ring doorbell twice'
       },
       {
-        restaurantAddress: 'Restaurant A - Koramangala (12.854277, 77.657815)',
-        customerAddress: 'Customer 2 - HSR Layout (12.851118, 77.664016)',
+        restaurantAddress: 'Restaurant A - (12.854277, 77.657815)',
+        customerAddress: 'Customer 2 - (12.851118, 77.664016)',
         exactRestaurantLocation: {
           lat: 12.854277,
           lng: 77.657815
@@ -133,8 +133,8 @@ app.post('/api/system/init-demo', async (req, res) => {
         specialInstructions: 'Call before delivery'
       },
       {
-        restaurantAddress: 'Restaurant B - Indiranagar (12.850867, 77.653867)',
-        customerAddress: 'Customer 2 - HSR Layout (12.851118, 77.664016)',
+        restaurantAddress: 'Restaurant B - (12.850867, 77.653867)',
+        customerAddress: 'Customer 2 - (12.851118, 77.664016)',
         exactRestaurantLocation: {
           lat: 12.850867,
           lng: 77.653867
@@ -147,8 +147,8 @@ app.post('/api/system/init-demo', async (req, res) => {
         specialInstructions: 'Leave at door'
       },
       {
-        restaurantAddress: 'Restaurant C - Jayanagar (12.845010, 77.646485)',
-        customerAddress: 'Customer 3 - JP Nagar (12.845407, 77.660669)',
+        restaurantAddress: 'Restaurant C - (12.845010, 77.646485)',
+        customerAddress: 'Customer 3 - (12.845407, 77.660669)',
         exactRestaurantLocation: {
           lat: 12.845010,
           lng: 77.646485
