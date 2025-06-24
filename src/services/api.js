@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:3000/api';
+const API_BASE = process.env.NODE_ENV === 'production' ? '/api' : 'https://graphs.trou.hackclub.app/api';
 
 class ApiService {
   constructor() {
