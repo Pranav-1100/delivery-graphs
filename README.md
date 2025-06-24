@@ -5,8 +5,6 @@
 ##  Quick Links
 
 - **Demo Video:** [Video](https://drive.google.com/file/d/1Npbb0nBbGJr_Bet0RgG96qAa-Viy88iz/view?usp=sharing)
-- **Live Frontend:** [Frontend](https://delivery-graphs.vercel.app/)
-- **Backend API:** [Backend](https://graphs.trou.hackclub.com)
 
 ##  What it does
 
