@@ -9,6 +9,7 @@ import AddOrderModal from './components/AddOrderModal';
 import { apiService } from './services/api';
 
 function App() {
+  // Initialize with empty arrays to prevent undefined errors
   const [partners, setPartners] = useState([]);
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState({});
@@ -17,6 +18,7 @@ function App() {
   const [viewingPartnerId, setViewingPartnerId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [apiError, setApiError] = useState(null);
   
   // Modal states
   const [showAddPartnerModal, setShowAddPartnerModal] = useState(false);
@@ -30,17 +32,28 @@ function App() {
   const loadAllData = async () => {
     try {
       setLoading(true);
+      setApiError(null);
+      
       const [partnersRes, ordersRes, statsRes] = await Promise.all([
         apiService.getPartners(),
         apiService.getOrders(),
         apiService.getSystemInfo()
       ]);
       
-      setPartners(partnersRes.data);
-      setOrders(ordersRes.data);
-      setStats(statsRes.data);
+      // Add null checks and ensure arrays
+      setPartners(Array.isArray(partnersRes?.data) ? partnersRes.data : []);
+      setOrders(Array.isArray(ordersRes?.data) ? ordersRes.data : []);
+      setStats(statsRes?.data || {});
+      
     } catch (error) {
+      console.error('API Error:', error);
+      setApiError(error.message);
       showNotification('Error loading data: ' + error.message, 'error');
+      
+      // Keep empty arrays on error
+      setPartners([]);
+      setOrders([]);
+      setStats({});
     } finally {
       setLoading(false);
     }
@@ -175,8 +188,9 @@ function App() {
     setTimeout(() => setNotification(null), 5000);
   };
 
-  const pendingOrders = orders.filter(order => order.status === 'PENDING');
-  const availablePartners = partners.filter(partner => partner.status === 'AVAILABLE');
+  // Add null checks and use fallback empty arrays
+  const pendingOrders = Array.isArray(orders) ? orders.filter(order => order.status === 'PENDING') : [];
+  const availablePartners = Array.isArray(partners) ? partners.filter(partner => partner.status === 'AVAILABLE') : [];
 
   // Determine which optimization data to show
   const currentOptimizationResult = selectedPartnerOptimization ? 
@@ -184,6 +198,42 @@ function App() {
   
   const viewingPartner = viewingPartnerId ? 
     partners.find(p => p.id === viewingPartnerId) : null;
+
+  // Show API error screen if backend is not accessible
+  if (apiError && !loading) {
+    return (
+      <div className="App">
+        <div className="api-error-screen">
+          <div className="error-container">
+            <div className="error-icon">⚠️</div>
+            <h2>Backend Connection Error</h2>
+            <p>Unable to connect to the backend server.</p>
+            <div className="error-details">
+              <p><strong>Error:</strong> {apiError}</p>
+              <p><strong>Expected Backend URL:</strong> {process.env.NODE_ENV === 'production' ? window.location.origin + '/api' : 'https://graphs.trou.hackclub.app/api'}</p>
+            </div>
+            <div className="error-actions">
+              <button onClick={loadAllData} className="btn btn-primary">
+                🔄 Retry Connection
+              </button>
+              <button onClick={() => setApiError(null)} className="btn btn-secondary">
+                🚀 Continue Offline
+              </button>
+            </div>
+            <div className="troubleshooting">
+              <h4>Troubleshooting:</h4>
+              <ul>
+                <li>Make sure the backend server is running</li>
+                <li>Check if the API endpoint is accessible</li>
+                <li>Verify CORS settings if backend is on different port</li>
+                <li>Check browser console for more details</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="App">
