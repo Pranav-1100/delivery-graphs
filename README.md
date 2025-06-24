@@ -1,70 +1,91 @@
-# Getting Started with Create React App
+# Dijkstra Route Optimization
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+**Finding the shortest and most optimized delivery routes using Dijkstra's Algorithm**
 
-## Available Scripts
+##  Quick Links
 
-In the project directory, you can run:
+- **Demo Video:** [Video](https://drive.google.com/file/d/1Npbb0nBbGJr_Bet0RgG96qAa-Viy88iz/view?usp=sharing)
+- **Live Frontend:** [Frontend](https://delivery-graphs.vercel.app/)
+- **Backend API:** [Backend](https://graphs.trou.hackclub.com)
 
-### `npm start`
+##  What it does
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+This application optimizes delivery routes for delivery partners using **Dijkstra's shortest path algorithm**. It automatically assigns orders to delivery partners while respecting time and capacity constraints, ensuring the most efficient delivery routes.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+**Key Features:**
+-  Real-time route optimization using Google Maps API
+-  30-minute delivery time constraints
+-  Maximum 5 packages per partner
+-  Smart auto-assignment algorithm
+-  Step-by-step algorithm visualization
 
-### `npm test`
+##  How to Use
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 1. Clone the Repository
+```bash
+git clone <your-repo-url>
+cd delivery-graphs
+```
 
-### `npm run build`
+### 2. Install Dependencies
+```bash
+# Install frontend dependencies
+npm install
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+# Install backend dependencies
+cd server
+npm install
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 3. Set Up Environment Variables
+Create a `.env` file in the `server` directory:
+```env
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+PORT=5000
+MAX_PACKAGES_PER_PARTNER=5
+MAX_DELIVERY_TIME_MINUTES=30
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### 4. Run the Application
 
-### `npm run eject`
+**Option A: Run Both Together**
+```bash
+# From root directory
+npm start  # Starts frontend on port 3000
+cd server && npm start  # Starts backend on port 5000
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+**Option B: Run Separately**
+```bash
+# Terminal 1 - Frontend
+npm start
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+# Terminal 2 - Backend
+cd server
+npm run dev
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### 5. Use the App
+1. Open `http://localhost:3000` in your browser
+2. Click **" Load Demo Data"** to initialize sample partners and orders
+3. Click **" Auto Assign with Dijkstra Algorithm"** to see the optimization in action
+4. View the step-by-step algorithm execution and optimal routes
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Tech Stack
 
-## Learn More
+- **Frontend:** React.js, CSS
+- **Backend:** Node.js, Express.js
+- **Algorithm:** Dijkstra's Shortest Path
+- **Maps:** Google Maps Distance Matrix API
+- **Data:** In-memory storage with constraint validation
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Algorithm Details
 
-### Code Splitting
+The application uses **Dijkstra's Algorithm** to find optimal delivery routes by:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+1. Building a graph with all pickup/delivery locations
+2. Calculating real distances using Google Maps API
+3. Finding shortest paths between all locations
+4. Optimizing pickup → delivery sequence
+5. Validating time and capacity constraints
