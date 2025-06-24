@@ -4,7 +4,7 @@ const dataStore = require('../models/dataStore');
 const dijkstraOptimizer = require('../services/dijkstraOptimizer');
 const googleMaps = require('../utils/googleMaps');
 
-// GET /api/orders/stats/overview - Get order statistics (MUST BE BEFORE /:id)
+// GET /api/orders/stats/overview - Get order statistics
 router.get('/stats/overview', (req, res) => {
   try {
     const orders = dataStore.getOrders();
@@ -36,10 +36,10 @@ router.get('/stats/overview', (req, res) => {
   }
 });
 
-// POST /api/orders/auto-assign - IMPROVED Auto assign with better distribution
+// POST /api/orders/auto-assign - Auto assign orders to partners
 router.post('/auto-assign', async (req, res) => {
   try {
-    console.log(`\n🤖 IMPROVED AUTO ASSIGNMENT with 30-minute constraints`);
+    console.log('Starting auto assignment with time constraints');
     
     const availablePartners = dataStore.getAvailablePartners();
     const pendingOrders = dataStore.getPendingOrders();
@@ -61,7 +61,7 @@ router.post('/auto-assign', async (req, res) => {
     console.log(`Available partners: ${availablePartners.length}`);
     console.log(`Pending orders: ${pendingOrders.length}`);
 
-    // IMPROVED DISTRIBUTION ALGORITHM
+    // Smart distribution algorithm
     const assignments = [];
     const remainingOrders = [...pendingOrders];
     
@@ -69,13 +69,13 @@ router.post('/auto-assign', async (req, res) => {
     for (const partner of availablePartners) {
       if (remainingOrders.length === 0) break;
       
-      console.log(`\n🔍 Evaluating partner: ${partner.name}`);
+      console.log(`Evaluating partner: ${partner.name}`);
       
       // Find best combination of orders for this partner within constraints
       const bestCombination = await router.findBestOrderCombination(partner, remainingOrders);
       
       if (bestCombination.orders.length > 0) {
-        console.log(`✅ Assigning ${bestCombination.orders.length} orders to ${partner.name} (${bestCombination.totalPackages}/${partner.maxPackages} packages, ~${Math.round(bestCombination.estimatedTime/60)} min)`);
+        console.log(`Assigning ${bestCombination.orders.length} orders to ${partner.name}`);
         
         assignments.push({
           partnerId: partner.id,
@@ -93,26 +93,23 @@ router.post('/auto-assign', async (req, res) => {
           }
         });
       } else {
-        console.log(`❌ No suitable orders found for ${partner.name} within 30-minute constraints`);
+        console.log(`No suitable orders found for ${partner.name} within time constraints`);
       }
     }
 
     if (assignments.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'No valid assignments found within 30-minute time constraints. Consider adding more partners or reducing order complexity.'
+        message: 'No valid assignments found within time constraints. Consider adding more partners or reducing order complexity.'
       });
     }
 
-    console.log(`\n📊 ASSIGNMENT SUMMARY:`);
-    console.log(`   Partners used: ${assignments.length}/${availablePartners.length}`);
-    console.log(`   Orders assigned: ${assignments.reduce((sum, a) => sum + a.orderIds.length, 0)}/${pendingOrders.length}`);
-    console.log(`   Remaining orders: ${remainingOrders.length}`);
+    console.log(`Assignment summary - Partners used: ${assignments.length}/${availablePartners.length}`);
 
-    // Execute the best assignment (prioritize the one with most orders)
+    // Execute the best assignment
     const bestAssignment = assignments.sort((a, b) => b.orderIds.length - a.orderIds.length)[0];
     
-    console.log(`\n🚀 Executing assignment: ${bestAssignment.partnerName} with ${bestAssignment.orderIds.length} orders`);
+    console.log(`Executing assignment: ${bestAssignment.partnerName} with ${bestAssignment.orderIds.length} orders`);
 
     // Run Dijkstra optimization for the best assignment
     const result = await dijkstraOptimizer.assignOrdersToPartner(
@@ -128,12 +125,12 @@ router.post('/auto-assign', async (req, res) => {
       });
     }
 
-    // FIXED: Store the optimization result for future retrieval
+    // Store the optimization result for future retrieval
     dataStore.storeOptimizationResult(bestAssignment.partnerId, result.optimization);
 
     res.json({
       success: true,
-      message: `Assigned ${bestAssignment.orderIds.length} orders to ${bestAssignment.partnerName} (${remainingOrders.length} orders remaining due to 30-min constraints)`,
+      message: `Assigned ${bestAssignment.orderIds.length} orders to ${bestAssignment.partnerName} (${remainingOrders.length} orders remaining due to time constraints)`,
       data: {
         ...result,
         autoAssignmentInfo: bestAssignment,
@@ -143,13 +140,13 @@ router.post('/auto-assign', async (req, res) => {
           totalOrders: pendingOrders.length,
           ordersAssigned: bestAssignment.orderIds.length,
           ordersRemaining: remainingOrders.length,
-          reasonForRemaining: remainingOrders.length > 0 ? '30-minute time constraints' : null
+          reasonForRemaining: remainingOrders.length > 0 ? 'Time constraints' : null
         }
       }
     });
 
   } catch (error) {
-    console.error('❌ Auto assignment failed:', error);
+    console.error('Auto assignment failed:', error);
     res.status(500).json({
       success: false,
       message: 'Auto assignment failed',
@@ -210,7 +207,7 @@ router.getCombinations = function(array, size) {
   return combinations;
 };
 
-// POST /api/orders/optimize-route - MAIN DIJKSTRA OPTIMIZATION ENDPOINT
+// POST /api/orders/optimize-route - Main Dijkstra optimization endpoint
 router.post('/optimize-route', async (req, res) => {
   try {
     const { partnerId, orderIds } = req.body;
@@ -222,9 +219,7 @@ router.post('/optimize-route', async (req, res) => {
       });
     }
 
-    console.log(`\n🎯 ROUTE OPTIMIZATION REQUEST`);
-    console.log(`Partner ID: ${partnerId}`);
-    console.log(`Order IDs: [${orderIds.join(', ')}]`);
+    console.log(`Route optimization request for partner ${partnerId} with orders [${orderIds.join(', ')}]`);
 
     // Run Dijkstra optimization
     const result = await dijkstraOptimizer.assignOrdersToPartner(orderIds, partnerId);
@@ -237,7 +232,7 @@ router.post('/optimize-route', async (req, res) => {
       });
     }
 
-    // FIXED: Store the optimization result for future retrieval
+    // Store the optimization result for future retrieval
     dataStore.storeOptimizationResult(partnerId, result.optimization);
 
     res.json({
@@ -247,7 +242,7 @@ router.post('/optimize-route', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Route optimization failed:', error);
+    console.error('Route optimization failed:', error);
     res.status(500).json({
       success: false,
       message: 'Route optimization failed',
@@ -256,7 +251,7 @@ router.post('/optimize-route', async (req, res) => {
   }
 });
 
-// GET /api/orders/optimization/:partnerId - FIXED: Get stored optimization details
+// GET /api/orders/optimization/:partnerId - Get stored optimization details
 router.get('/optimization/:partnerId', async (req, res) => {
   try {
     const partnerId = parseInt(req.params.partnerId);
@@ -269,13 +264,13 @@ router.get('/optimization/:partnerId', async (req, res) => {
       });
     }
 
-    console.log(`\n📊 RETRIEVING OPTIMIZATION for Partner: ${partner.name} (ID: ${partnerId})`);
+    console.log(`Retrieving optimization for Partner: ${partner.name} (ID: ${partnerId})`);
 
-    // FIXED: Try to get stored optimization result first
+    // Try to get stored optimization result first
     const storedOptimization = dataStore.getOptimizationResult(partnerId);
     
     if (storedOptimization) {
-      console.log(`✅ Found stored optimization for ${partner.name}`);
+      console.log(`Found stored optimization for ${partner.name}`);
       
       // Get current assigned orders for this partner
       const assignedOrders = dataStore.getPartnerOrders(partnerId);
@@ -307,7 +302,7 @@ router.get('/optimization/:partnerId', async (req, res) => {
     }
 
     // If partner has orders but no stored optimization, return basic info
-    console.log(`⚠️ No stored optimization found for ${partner.name}, but partner has ${assignedOrders.length} assigned orders`);
+    console.log(`No stored optimization found for ${partner.name}, but partner has ${assignedOrders.length} assigned orders`);
     
     res.json({
       success: true,
@@ -321,7 +316,7 @@ router.get('/optimization/:partnerId', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Failed to get optimization details:', error);
+    console.error('Failed to get optimization details:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get optimization details',

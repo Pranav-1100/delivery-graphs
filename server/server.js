@@ -31,7 +31,7 @@ app.use('/api/orders', ordersRouter);
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
-    message: 'Dijkstra Route Optimization API is running',
+    message: 'Route Optimization API is running',
     timestamp: new Date(),
     version: '1.0.0',
     algorithms: ['Dijkstra', 'Haversine Distance'],
@@ -57,16 +57,16 @@ app.get('/api/system/info', (req, res) => {
     });
   });  
 
-// Initialize demo data endpoint with EXACT coordinates
+// Initialize sample data endpoint
 app.post('/api/system/init-demo', async (req, res) => {
   try {
     // Clear existing data including optimizations
     dataStore.clearAll();
 
-    console.log('🧪 Initializing EXACT coordinate demo data...');
+    console.log('Initializing sample data...');
 
-    // Add demo delivery partners with EXACT coordinates (NO GEOCODING)
-    const demoPartners = [
+    // Add sample delivery partners
+    const samplePartners = [
       { 
         name: 'Pranav Aggarwal', 
         phone: '1', 
@@ -85,8 +85,8 @@ app.post('/api/system/init-demo', async (req, res) => {
       }
     ];
 
-    // Add partners with EXACT coordinates (bypass geocoding)
-    for (const partnerData of demoPartners) {
+    // Add partners with exact coordinates
+    for (const partnerData of samplePartners) {
       const partner = {
         id: dataStore.nextPartnerId++,
         name: partnerData.name,
@@ -99,11 +99,11 @@ app.post('/api/system/init-demo', async (req, res) => {
         createdAt: new Date()
       };
       dataStore.partners.push(partner);
-      console.log(`✅ Added partner: ${partner.name} at EXACT location (${partnerData.exactLocation.lat}, ${partnerData.exactLocation.lng})`);
+      console.log(`Added partner: ${partner.name}`);
     }
 
-    // Add demo orders with EXACT coordinates (NO GEOCODING) 
-    const demoOrders = [
+    // Add sample orders
+    const sampleOrders = [
       {
         restaurantAddress: 'Restaurant A - Koramangala (12.854277, 77.657815)',
         customerAddress: 'Customer 1 - BTM Layout (12.850616, 77.647665)',
@@ -162,8 +162,8 @@ app.post('/api/system/init-demo', async (req, res) => {
       }
     ];
 
-    // Add orders with EXACT coordinates (bypass geocoding completely)
-    for (const orderData of demoOrders) {
+    // Add orders with exact coordinates
+    for (const orderData of sampleOrders) {
       const order = {
         id: dataStore.nextOrderId++,
         restaurantAddress: orderData.restaurantAddress,
@@ -179,27 +179,17 @@ app.post('/api/system/init-demo', async (req, res) => {
       };
       dataStore.orders.push(order);
       
-      console.log(`✅ Added Order #${order.id}:`);
-      console.log(`   Restaurant: (${order.restaurantLocation.lat}, ${order.restaurantLocation.lng}) - ${order.restaurantAddress}`);
-      console.log(`   Customer: (${order.customerLocation.lat}, ${order.customerLocation.lng}) - ${order.customerAddress}`);
+      console.log(`Added Order #${order.id}`);
     }
 
     const stats = dataStore.getStats();
 
-    console.log('\n🎯 EXACT coordinate demo data initialized successfully!');
+    console.log('Sample data initialized successfully!');
     console.log(`Created ${stats.totalPartners} partners and ${stats.totalOrders} orders`);
-    
-    // Validate coordinates are correct
-    console.log('\n🔍 COORDINATE VALIDATION:');
-    dataStore.orders.forEach(order => {
-      console.log(`Order #${order.id}:`);
-      console.log(`  Restaurant: ${order.restaurantLocation.lat}, ${order.restaurantLocation.lng}`);
-      console.log(`  Customer: ${order.customerLocation.lat}, ${order.customerLocation.lng}`);
-    });
 
     res.json({
       success: true,
-      message: 'EXACT coordinate demo data initialized successfully!',
+      message: 'Sample data initialized successfully!',
       data: {
         partnersCreated: stats.totalPartners,
         ordersCreated: stats.totalOrders,
@@ -218,10 +208,10 @@ app.post('/api/system/init-demo', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Failed to initialize exact coordinate demo data:', error);
+    console.error('Failed to initialize sample data:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to initialize exact coordinate demo data',
+      message: 'Failed to initialize sample data',
       error: error.message
     });
   }
@@ -245,20 +235,20 @@ app.post('/api/system/clear', (req, res) => {
   }
 });
 
-// FIXED: Reset system endpoint - properly clear optimization data
+// Reset system endpoint
 app.post('/api/system/reset', (req, res) => {
   try {
-    console.log('🔄 Resetting system...');
+    console.log('Resetting system...');
     
     // Count optimizations before clearing
     const optimizationsBefore = Object.keys(dataStore.getAllOptimizations()).length;
     
-    // Use the improved reset method that clears optimizations
+    // Use the reset method that clears optimizations
     dataStore.resetAssignments();
 
     const stats = dataStore.getStats();
-    console.log(`✅ Reset completed: ${stats.totalPartners} partners, ${stats.totalOrders} orders`);
-    console.log(`📊 Cleared ${optimizationsBefore} stored optimization results`);
+    console.log(`Reset completed: ${stats.totalPartners} partners, ${stats.totalOrders} orders`);
+    console.log(`Cleared ${optimizationsBefore} optimization results`);
 
     res.json({
       success: true,
@@ -271,7 +261,7 @@ app.post('/api/system/reset', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Failed to reset system:', error);
+    console.error('Failed to reset system:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to reset system',
@@ -343,7 +333,7 @@ app.get('/api/debug/graph-data', (req, res) => {
   }
 });
 
-// NEW: Debug endpoint to view stored optimizations
+// Debug endpoint to view stored optimizations
 app.get('/api/debug/optimizations', (req, res) => {
   try {
     const optimizations = dataStore.getAllOptimizations();
@@ -402,22 +392,16 @@ app.use('/api/*', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Dijkstra Route Optimization Server running on port ${PORT}`);
-  console.log(`📊 Dashboard: http://localhost:${PORT}`);
-  console.log(`🔗 API: http://localhost:${PORT}/api`);
-  console.log(`💚 Health Check: http://localhost:${PORT}/api/health`);
+  console.log(`Route Optimization Server running on port ${PORT}`);
+  console.log(`Dashboard: http://localhost:${PORT}`);
+  console.log(`API: http://localhost:${PORT}/api`);
+  console.log(`Health Check: http://localhost:${PORT}/api/health`);
   
-  console.log('\n📋 System Configuration:');
+  console.log('\nSystem Configuration:');
   console.log(`   Algorithm: Dijkstra's Algorithm for Route Optimization`);
   console.log(`   Max packages per partner: 5`);
   console.log(`   Max delivery time: 30 minutes`);
-  console.log(`   Google Maps API: ${process.env.GOOGLE_MAPS_API_KEY ? '✅ Configured' : '❌ Not configured (using fallback)'}`);
-  
-  console.log('\n🎯 Quick Start:');
-  console.log('   1. Initialize demo data: POST /api/system/init-demo');
-  console.log('   2. Optimize routes: POST /api/orders/optimize-route');
-  console.log('   3. View optimization steps for educational purposes!');
-  console.log('   4. Click on assigned partners to view their stored optimization details!');
+  console.log(`   Google Maps API: ${process.env.GOOGLE_MAPS_API_KEY ? 'Configured' : 'Not configured (using fallback)'}`);
 });
 
 module.exports = app;

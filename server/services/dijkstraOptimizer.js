@@ -5,9 +5,8 @@ class DijkstraOptimizer {
   // Main method: Optimize route for partner with multiple orders using Dijkstra
   async optimizeRoute(partner, orders) {
     try {
-      console.log(`\n🎯 DIJKSTRA ROUTE OPTIMIZATION STARTED`);
-      console.log(`Partner: ${partner.name}`);
-      console.log(`Orders: ${orders.length}`);
+      console.log('Starting route optimization');
+      console.log(`Partner: ${partner.name}, Orders: ${orders.length}`);
       
       const optimizationResult = {
         partnerId: partner.id,
@@ -23,8 +22,8 @@ class DijkstraOptimizer {
         }
       };
   
-      // Step 1: Check basic constraints - FIXED: Don't check partner status for stored optimizations
-      const constraintCheck = await this.checkConstraints(partner, orders, true); // Skip status check
+      // Step 1: Check basic constraints
+      const constraintCheck = await this.checkConstraints(partner, orders, true);
       
       if (!constraintCheck.isValid) {
         optimizationResult.constraints.violations = constraintCheck.violations;
@@ -34,7 +33,7 @@ class DijkstraOptimizer {
           description: 'Constraint validation failed - assignment cannot proceed',
           details: constraintCheck.violations
         });
-        console.log(`❌ Constraint check failed:`, constraintCheck.violations);
+        console.log('Constraint check failed:', constraintCheck.violations);
         return optimizationResult;
       }
   
@@ -71,16 +70,16 @@ class DijkstraOptimizer {
       optimizationResult.steps.push(...dijkstraResult.steps);
       optimizationResult.finalRoute = dijkstraResult.optimalRoute;
   
-      console.log(`✅ DIJKSTRA OPTIMIZATION COMPLETED - Route found with ${dijkstraResult.optimalRoute.path.length} stops`);
+      console.log('Optimization completed - Route found with', dijkstraResult.optimalRoute.path.length, 'stops');
       return optimizationResult;
   
     } catch (error) {
-      console.error('❌ Dijkstra optimization failed:', error);
+      console.error('Dijkstra optimization failed:', error);
       throw error;
     }
   }  
 
-  // Check partner and order constraints - FIXED: Add skipStatusCheck parameter
+  // Check partner and order constraints
   checkConstraints(partner, orders, skipStatusCheck = false) {
     const violations = [];
     let isValid = true;
@@ -92,7 +91,7 @@ class DijkstraOptimizer {
       isValid = false;
     }
 
-    // Check if partner is available (skip for stored optimizations)
+    // Check if partner is available
     if (!skipStatusCheck && partner.status !== 'AVAILABLE') {
       violations.push(`Partner not available: status is ${partner.status}`);
       isValid = false;
@@ -103,7 +102,7 @@ class DijkstraOptimizer {
 
   // Build graph representation with all locations
   async buildGraph(partner, orders) {
-    console.log(`\n📊 Building graph representation...`);
+    console.log('Building graph representation...');
     
     const nodes = [];
     const edges = [];
@@ -136,11 +135,11 @@ class DijkstraOptimizer {
         address: order.customerAddress,
         orderId: order.id,
         packages: order.packageCount,
-        requiresPickup: `R${order.id}` // Must visit restaurant first
+        requiresPickup: `R${order.id}`
       });
     });
 
-    // Add partner return location (same as start)
+    // Add partner return location
     nodes.push({
       id: 'END',
       type: 'PARTNER_END',
@@ -148,7 +147,7 @@ class DijkstraOptimizer {
       address: 'Partner Return Location'
     });
 
-    console.log(`📍 Created ${nodes.length} nodes`);
+    console.log(`Created ${nodes.length} nodes`);
 
     // Build edges with Google Maps distances
     for (let i = 0; i < nodes.length; i++) {
@@ -163,7 +162,7 @@ class DijkstraOptimizer {
             edges.push({
               from: nodes[i].id,
               to: nodes[j].id,
-              weight: distance.duration, // Use time as weight
+              weight: distance.duration,
               distance: distance.distance,
               duration: distance.duration
             });
@@ -177,7 +176,7 @@ class DijkstraOptimizer {
             edges.push({
               from: nodes[i].id,
               to: nodes[j].id,
-              weight: fallbackDistance * 120, // Rough time estimate
+              weight: fallbackDistance * 120,
               distance: fallbackDistance * 1000,
               duration: fallbackDistance * 120
             });
@@ -186,14 +185,14 @@ class DijkstraOptimizer {
       }
     }
 
-    console.log(`🔗 Created ${edges.length} edges`);
+    console.log(`Created ${edges.length} edges`);
 
     return { nodes, edges };
   }
 
   // Run Dijkstra's algorithm to find optimal route
   async runDijkstra(graph, partner) {
-    console.log(`\n🚀 Running Dijkstra's Algorithm...`);
+    console.log('Running Dijkstra\'s Algorithm...');
     
     const dijkstraSteps = [];
     const nodes = graph.nodes;
@@ -205,7 +204,7 @@ class DijkstraOptimizer {
     const visited = new Set();
     const unvisited = new Set();
 
-    // Step 3.1: Initialize
+    // Initialize
     nodes.forEach(node => {
       distances[node.id] = node.id === 'START' ? 0 : Infinity;
       previous[node.id] = null;
@@ -303,7 +302,7 @@ class DijkstraOptimizer {
       }
     });
 
-    console.log(`✅ Dijkstra completed: ${optimalRoute.path.length} stops, ${Math.round(optimalRoute.totalTime/60)} minutes`);
+    console.log('Dijkstra completed:', optimalRoute.path.length, 'stops,', Math.round(optimalRoute.totalTime/60), 'minutes');
 
     return {
       steps: dijkstraSteps,
@@ -315,11 +314,9 @@ class DijkstraOptimizer {
 
   // Build the optimal path from Dijkstra results
   buildOptimalPath(previous, distances, nodes, edges) {
-    console.log(`\n🛣️ Building optimal path...`);
+    console.log('Building optimal path...');
     
     // For delivery routing, we need to visit all restaurants first, then customers
-    // This is a simplified TSP approach using Dijkstra results
-    
     const restaurants = nodes.filter(n => n.type === 'RESTAURANT');
     const customers = nodes.filter(n => n.type === 'CUSTOMER');
     
@@ -408,16 +405,16 @@ class DijkstraOptimizer {
       });
     }
 
-    console.log(`📍 Path: ${path.length} stops`);
-    console.log(`⏱️ Total time: ${Math.round(totalTime/60)} minutes`);
-    console.log(`🛣️ Total distance: ${Math.round(totalDistance/1000)} km`);
+    console.log(`Path: ${path.length} stops`);
+    console.log(`Total time: ${Math.round(totalTime/60)} minutes`);
+    console.log(`Total distance: ${Math.round(totalDistance/1000)} km`);
 
     return {
       path,
       totalTime,
       totalDistance,
       totalStops: path.length,
-      isOptimal: totalTime <= 30 * 60 // Check 30-minute constraint
+      isOptimal: totalTime <= 30 * 60
     };
   }
 
@@ -430,7 +427,7 @@ class DijkstraOptimizer {
     let totalDistance = 0;
     let currentLocation = partner.currentLocation;
     
-    console.log(`🚗 Estimating delivery time for ${orders.length} orders:`);
+    console.log(`Estimating delivery time for ${orders.length} orders`);
     
     // Calculate route: Start -> Restaurant1 -> Customer1 -> Restaurant2 -> Customer2 -> ... -> Base
     orders.forEach((order, index) => {
@@ -440,7 +437,6 @@ class DijkstraOptimizer {
         order.restaurantLocation
       );
       totalDistance += distanceToRestaurant;
-      console.log(`   Step ${index*2 + 1}: To Restaurant #${order.id} = ${distanceToRestaurant.toFixed(2)} km`);
       
       // Distance from restaurant to customer
       const distanceToCustomer = googleMaps.calculateHaversineDistance(
@@ -448,7 +444,6 @@ class DijkstraOptimizer {
         order.customerLocation
       );
       totalDistance += distanceToCustomer;
-      console.log(`   Step ${index*2 + 2}: To Customer #${order.id} = ${distanceToCustomer.toFixed(2)} km`);
       
       currentLocation = order.customerLocation;
     });
@@ -459,11 +454,11 @@ class DijkstraOptimizer {
       partner.homeBase || partner.currentLocation
     );
     totalDistance += distanceToBase;
-    console.log(`   Final: Return to base = ${distanceToBase.toFixed(2)} km`);
-    console.log(`   Total distance: ${totalDistance.toFixed(2)} km`);
     
-    // IMPROVED: More realistic time estimation for Bangalore traffic
-    const averageSpeedKmh = 20; // Realistic city speed with traffic
+    console.log(`Total distance: ${totalDistance.toFixed(2)} km`);
+    
+    // Realistic time estimation for city traffic
+    const averageSpeedKmh = 20;
     const travelTimeSeconds = (totalDistance / averageSpeedKmh) * 3600;
     
     const pickupTimeSeconds = orders.length * 3 * 60; // 3 minutes per pickup
@@ -473,9 +468,9 @@ class DijkstraOptimizer {
     const totalTimeSeconds = travelTimeSeconds + stopTimeSeconds;
     const totalTimeMinutes = Math.round(totalTimeSeconds / 60);
     
-    console.log(`   Travel time: ${Math.round(travelTimeSeconds/60)} min (${averageSpeedKmh} km/h avg speed)`);
-    console.log(`   Stop time: ${Math.round(stopTimeSeconds/60)} min (${orders.length} pickups + ${orders.length} deliveries)`);
-    console.log(`   Total estimated time: ${totalTimeMinutes} minutes`);
+    console.log(`Travel time: ${Math.round(travelTimeSeconds/60)} min`);
+    console.log(`Stop time: ${Math.round(stopTimeSeconds/60)} min`);
+    console.log(`Total estimated time: ${totalTimeMinutes} minutes`);
     
     return totalTimeSeconds;
   }
@@ -485,17 +480,17 @@ class DijkstraOptimizer {
     const violations = [];
     let isValid = true;
   
-    console.log(`🔍 Checking constraints for ${partner.name} with ${orders.length} orders`);
+    console.log(`Checking constraints for ${partner.name} with ${orders.length} orders`);
   
     // Check package capacity
     const totalPackages = orders.reduce((sum, order) => sum + order.packageCount, 0);
-    console.log(`📦 Package check: ${totalPackages}/${partner.maxPackages}`);
+    console.log(`Package check: ${totalPackages}/${partner.maxPackages}`);
     if (totalPackages > partner.maxPackages) {
       violations.push(`Package capacity exceeded: ${totalPackages} > ${partner.maxPackages}`);
       isValid = false;
     }
   
-    // Check if partner is available (skip for stored optimizations)
+    // Check if partner is available
     if (!skipStatusCheck && partner.status !== 'AVAILABLE') {
       violations.push(`Partner not available: status is ${partner.status}`);
       isValid = false;
@@ -506,24 +501,24 @@ class DijkstraOptimizer {
     const maxTimeMinutes = Math.round(partner.maxDeliveryTime / 60);
     const estimatedTimeMinutes = Math.round(estimatedTime / 60);
     
-    console.log(`⏱️ Time check: ${estimatedTimeMinutes} min (estimated) vs ${maxTimeMinutes} min (max)`);
+    console.log(`Time check: ${estimatedTimeMinutes} min (estimated) vs ${maxTimeMinutes} min (max)`);
     
     // Allow 10% buffer for estimation inaccuracies
     const timeBuffer = partner.maxDeliveryTime * 1.1;
     if (estimatedTime > timeBuffer) {
-      violations.push(`Estimated delivery time significantly exceeded: ${estimatedTimeMinutes} min > ${maxTimeMinutes} min (with 10% buffer)`);
+      violations.push(`Estimated delivery time exceeded: ${estimatedTimeMinutes} min > ${maxTimeMinutes} min (with buffer)`);
       isValid = false;
     }
   
-    console.log(`✅ Constraint check result: ${isValid ? 'PASSED' : 'FAILED'}`);
+    console.log(`Constraint check result: ${isValid ? 'PASSED' : 'FAILED'}`);
     if (violations.length > 0) {
-      console.log(`   Violations:`, violations);
+      console.log('Violations:', violations);
     }
   
     return { isValid, violations, estimatedTime };
   }
 
-  // FIXED: Enhanced assignment method that stores optimization results
+  // Assignment method that stores optimization results
   async assignOrdersToPartner(orderIds, partnerId) {
     const dataStore = require('../models/dataStore');
     
@@ -535,14 +530,14 @@ class DijkstraOptimizer {
         throw new Error('Partner or orders not found');
       }
   
-      console.log(`🎯 Running optimization for partner ${partner.name} with ${orders.length} orders`);
+      console.log(`Running optimization for partner ${partner.name} with ${orders.length} orders`);
   
       // Run Dijkstra optimization
       const optimizationResult = await this.optimizeRoute(partner, orders);
       
       // Check for violations
       if (optimizationResult.constraints && optimizationResult.constraints.violations && optimizationResult.constraints.violations.length > 0) {
-        console.log(`❌ Constraint violations found:`, optimizationResult.constraints.violations);
+        console.log('Constraint violations found:', optimizationResult.constraints.violations);
         return {
           success: false,
           reason: 'CONSTRAINTS_VIOLATED',
@@ -560,7 +555,7 @@ class DijkstraOptimizer {
         });
       });
   
-      console.log(`✅ Successfully assigned ${orders.length} orders to ${partner.name}`);
+      console.log(`Successfully assigned ${orders.length} orders to ${partner.name}`);
   
       return {
         success: true,
@@ -570,7 +565,7 @@ class DijkstraOptimizer {
       };
   
     } catch (error) {
-      console.error('❌ Assignment failed:', error);
+      console.error('Assignment failed:', error);
       throw error;
     }
   }
