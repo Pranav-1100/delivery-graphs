@@ -78,7 +78,7 @@ const DijkstraVisualization = ({
   return (
     <div className="dijkstra-container">
       <div className="section-header">
-        <h2>🧠 Dijkstra Route Optimization Results</h2>
+        <h2> Dijkstra Route Optimization Results</h2>
         <div className="optimization-info">
           <span className="partner-name">Partner: {optimization.partnerName || 'Unknown'}</span>
           <span className="order-count">{optimization.totalOrders || 0} Orders</span>

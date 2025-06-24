@@ -240,7 +240,7 @@ function App() {
       {/* Header */}
       <header className="header">
         <div className="header-content">
-          <h1>🎯 Dijkstra Route Optimization</h1>
+          <h1> Dijkstra Route Optimization</h1>
           <p>Delivery Route Optimization using Graph Algorithms</p>
           <div className="header-actions">
             <button 

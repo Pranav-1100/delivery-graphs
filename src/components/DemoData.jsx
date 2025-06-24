@@ -63,14 +63,14 @@ const DemoData = ({
   return (
     <div className="demo-data-container">
       <div className="section-header">
-        <h2>🎯 Dijkstra Route Optimization</h2>
+        <h2> Dijkstra Route Optimization</h2>
         <p>Automatic optimal assignment with 30-minute constraints</p>
       </div>
 
       <div className="optimization-setup">
         {/* PRIMARY: Auto Assignment */}
         <div className="auto-assign-section primary">
-          <h3>🤖 Smart Auto Assignment (Main Feature)</h3>
+          <h3> Smart Auto Assignment (Main Feature)</h3>
           <div className="constraint-display">
             <div className="constraint-item">
               <span className="constraint-icon">📦</span>
