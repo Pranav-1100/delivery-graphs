@@ -128,6 +128,9 @@ router.post('/auto-assign', async (req, res) => {
       });
     }
 
+    // FIXED: Store the optimization result for future retrieval
+    dataStore.storeOptimizationResult(bestAssignment.partnerId, result.optimization);
+
     res.json({
       success: true,
       message: `Assigned ${bestAssignment.orderIds.length} orders to ${bestAssignment.partnerName} (${remainingOrders.length} orders remaining due to 30-min constraints)`,
@@ -234,6 +237,9 @@ router.post('/optimize-route', async (req, res) => {
       });
     }
 
+    // FIXED: Store the optimization result for future retrieval
+    dataStore.storeOptimizationResult(partnerId, result.optimization);
+
     res.json({
       success: true,
       message: 'Route optimized successfully using Dijkstra algorithm',
@@ -250,10 +256,12 @@ router.post('/optimize-route', async (req, res) => {
   }
 });
 
-// GET /api/orders/optimization/:partnerId - Get optimization details for partner
+// GET /api/orders/optimization/:partnerId - FIXED: Get stored optimization details
 router.get('/optimization/:partnerId', async (req, res) => {
   try {
-    const partner = dataStore.getPartnerById(req.params.partnerId);
+    const partnerId = parseInt(req.params.partnerId);
+    const partner = dataStore.getPartnerById(partnerId);
+    
     if (!partner) {
       return res.status(404).json({
         success: false,
@@ -261,7 +269,30 @@ router.get('/optimization/:partnerId', async (req, res) => {
       });
     }
 
-    const assignedOrders = dataStore.getPartnerOrders(req.params.partnerId);
+    console.log(`\n📊 RETRIEVING OPTIMIZATION for Partner: ${partner.name} (ID: ${partnerId})`);
+
+    // FIXED: Try to get stored optimization result first
+    const storedOptimization = dataStore.getOptimizationResult(partnerId);
+    
+    if (storedOptimization) {
+      console.log(`✅ Found stored optimization for ${partner.name}`);
+      
+      // Get current assigned orders for this partner
+      const assignedOrders = dataStore.getPartnerOrders(partnerId);
+      
+      return res.json({
+        success: true,
+        message: 'Retrieved stored optimization details',
+        data: {
+          partner,
+          orders: assignedOrders,
+          optimization: storedOptimization
+        }
+      });
+    }
+
+    // If no stored optimization, check if partner has assigned orders
+    const assignedOrders = dataStore.getPartnerOrders(partnerId);
     
     if (assignedOrders.length === 0) {
       return res.json({
@@ -275,19 +306,22 @@ router.get('/optimization/:partnerId', async (req, res) => {
       });
     }
 
-    // Run optimization analysis
-    const optimization = await dijkstraOptimizer.optimizeRoute(partner, assignedOrders);
-
+    // If partner has orders but no stored optimization, return basic info
+    console.log(`⚠️ No stored optimization found for ${partner.name}, but partner has ${assignedOrders.length} assigned orders`);
+    
     res.json({
       success: true,
+      message: 'Partner has assigned orders but no stored optimization. Try running auto-assign or manual optimization again.',
       data: {
         partner,
         orders: assignedOrders,
-        optimization
+        optimization: null,
+        needsOptimization: true
       }
     });
 
   } catch (error) {
+    console.error('❌ Failed to get optimization details:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get optimization details',
@@ -598,7 +632,6 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// GET /api/orders/stats/overview - MOVED TO END TO AVOID CONFLICTS
 // DELETE /api/orders/:id - Delete order
 router.delete('/:id', (req, res) => {
   try {

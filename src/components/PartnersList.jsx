@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PartnersList = ({ partners }) => {
+const PartnersList = ({ partners, onPartnerClick }) => {
   const availablePartners = partners.filter(p => p.status === 'AVAILABLE');
   const assignedPartners = partners.filter(p => p.status === 'ASSIGNED');
 
@@ -29,7 +29,11 @@ const PartnersList = ({ partners }) => {
                 </h3>
                 <div className="partners-grid">
                   {availablePartners.map(partner => (
-                    <PartnerCard key={partner.id} partner={partner} />
+                    <PartnerCard 
+                      key={partner.id} 
+                      partner={partner} 
+                      onPartnerClick={onPartnerClick}
+                    />
                   ))}
                 </div>
               </div>
@@ -40,11 +44,15 @@ const PartnersList = ({ partners }) => {
               <div className="partners-section">
                 <h3 className="section-title">
                   <span className="status-dot assigned"></span>
-                  Assigned Partners ({assignedPartners.length})
+                  Assigned Partners ({assignedPartners.length}) - Click to view optimization
                 </h3>
                 <div className="partners-grid">
                   {assignedPartners.map(partner => (
-                    <PartnerCard key={partner.id} partner={partner} />
+                    <PartnerCard 
+                      key={partner.id} 
+                      partner={partner} 
+                      onPartnerClick={onPartnerClick}
+                    />
                   ))}
                 </div>
               </div>
@@ -69,15 +77,36 @@ const PartnersList = ({ partners }) => {
               <span className="stat-label">Total Capacity</span>
             </div>
           </div>
+          
+          {assignedPartners.length > 0 && (
+            <div className="optimization-note">
+              <div className="note-icon">💡</div>
+              <div className="note-text">
+                Click on any assigned partner to view their Dijkstra optimization details and route!
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 };
 
-const PartnerCard = ({ partner }) => {
+const PartnerCard = ({ partner, onPartnerClick }) => {
+  const handlePartnerClick = () => {
+    if (partner.status === 'ASSIGNED' && onPartnerClick) {
+      onPartnerClick(partner.id);
+    }
+  };
+
   return (
-    <div className={`partner-card ${partner.status.toLowerCase()}`}>
+    <div 
+      className={`partner-card ${partner.status.toLowerCase()} ${partner.status === 'ASSIGNED' ? 'clickable' : ''}`}
+      onClick={handlePartnerClick}
+      style={{
+        cursor: partner.status === 'ASSIGNED' ? 'pointer' : 'default'
+      }}
+    >
       <div className="partner-header">
         <div className="partner-name">{partner.name}</div>
         <div className={`partner-status ${partner.status.toLowerCase()}`}>
@@ -125,7 +154,7 @@ const PartnerCard = ({ partner }) => {
         {partner.status === 'ASSIGNED' && (
           <div className="partner-working">
             <span className="working-icon">🚚</span>
-            <span className="working-text">Currently optimized</span>
+            <span className="working-text">📊 Click to view optimization</span>
           </div>
         )}
       </div>

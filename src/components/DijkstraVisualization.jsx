@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 
-const DijkstraVisualization = ({ optimizationResult, partners, orders }) => {
+const DijkstraVisualization = ({ 
+  optimizationResult, 
+  partners, 
+  orders, 
+  viewingPartner, 
+  onClearView 
+}) => {
   const [selectedStep, setSelectedStep] = useState(null);
   const [showGraph, setShowGraph] = useState(true);
 
@@ -9,12 +15,18 @@ const DijkstraVisualization = ({ optimizationResult, partners, orders }) => {
       <div className="dijkstra-container">
         <div className="section-header">
           <h2>🧠 Dijkstra's Algorithm Visualization</h2>
-          <p>Optimize a route to see step-by-step algorithm execution</p>
+          <p>Optimize a route or click on an assigned partner to see step-by-step algorithm execution</p>
         </div>
         <div className="empty-state">
           <div className="empty-icon">⚡</div>
           <h3>Ready for Route Optimization</h3>
-          <p>Select multiple orders and assign them to a partner to see Dijkstra's algorithm in action!</p>
+          <p>
+            {partners.filter(p => p.status === 'ASSIGNED').length > 0 ? (
+              <>Click on any assigned partner below to view their optimization details, or select orders to create a new optimization!</>
+            ) : (
+              <>Select multiple orders and assign them to a partner to see Dijkstra's algorithm in action!</>
+            )}
+          </p>
           <div className="algorithm-info">
             <h4>What you'll see:</h4>
             <ul>
@@ -25,16 +37,28 @@ const DijkstraVisualization = ({ optimizationResult, partners, orders }) => {
               <li>📈 Performance metrics</li>
             </ul>
           </div>
+          
+          {/* Show assigned partners if any */}
+          {partners.filter(p => p.status === 'ASSIGNED').length > 0 && (
+            <div className="assigned-partners-hint">
+              <h4>👆 Assigned Partners (Click to view optimization):</h4>
+              <div className="partners-list">
+                {partners.filter(p => p.status === 'ASSIGNED').map(partner => (
+                  <span key={partner.id} className="partner-hint">
+                    🚚 {partner.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
   // FIXED: Access the correct data structure
-  // The data comes as optimizationResult.data.optimization, not optimizationResult.optimization
   const optimization = optimizationResult.data?.optimization || optimizationResult.optimization;
   
-  // Add safety checks for undefined values
   if (!optimization) {
     return (
       <div className="dijkstra-container">
@@ -46,9 +70,6 @@ const DijkstraVisualization = ({ optimizationResult, partners, orders }) => {
           <div className="empty-icon">❌</div>
           <h3>Data Structure Error</h3>
           <p>Please try running the optimization again.</p>
-          <div className="debug-info">
-            <pre>{JSON.stringify(optimizationResult, null, 2)}</pre>
-          </div>
         </div>
       </div>
     );
@@ -61,6 +82,11 @@ const DijkstraVisualization = ({ optimizationResult, partners, orders }) => {
         <div className="optimization-info">
           <span className="partner-name">Partner: {optimization.partnerName || 'Unknown'}</span>
           <span className="order-count">{optimization.totalOrders || 0} Orders</span>
+          {viewingPartner && (
+            <span className="viewing-indicator">
+              👁️ Viewing {viewingPartner.name}'s optimization
+            </span>
+          )}
         </div>
       </div>
 
@@ -78,9 +104,61 @@ const DijkstraVisualization = ({ optimizationResult, partners, orders }) => {
         >
           🔄 Reset View
         </button>
+        
+        {/* NEW: Clear Partner View Button */}
+        {viewingPartner && onClearView && (
+          <button 
+            className="control-btn clear-view"
+            onClick={onClearView}
+          >
+            ❌ Clear Partner View
+          </button>
+        )}
+        
+        {/* Show optimization timestamp */}
+        {optimizationResult.data?.partner && (
+          <span className="optimization-timestamp">
+            Last updated: {new Date().toLocaleTimeString()}
+          </span>
+        )}
       </div>
 
-      {/* Graph Representation - FIXED: Added safety checks */}
+      {/* Partner-specific info banner */}
+      {viewingPartner && (
+        <div className="partner-info-banner">
+          <div className="banner-content">
+            <div className="partner-details">
+              <h3>👤 {viewingPartner.name}</h3>
+              <div className="partner-stats">
+                <span>📞 {viewingPartner.phone}</span>
+                <span>📦 {optimization.totalOrders} orders assigned</span>
+                <span>⏱️ Status: {viewingPartner.status}</span>
+                <span>📍 Location: {viewingPartner.currentLocation.lat.toFixed(4)}, {viewingPartner.currentLocation.lng.toFixed(4)}</span>
+              </div>
+            </div>
+            
+            {/* Show assigned orders */}
+            {optimizationResult.data?.orders && (
+              <div className="assigned-orders-summary">
+                <h4>📦 Assigned Orders:</h4>
+                <div className="orders-list">
+                  {optimizationResult.data.orders.map(order => (
+                    <div key={order.id} className="order-summary">
+                      <span className="order-id">#{order.id}</span>
+                      <span className="order-packages">📦 {order.packageCount}</span>
+                      <span className="order-route">
+                        {order.restaurantAddress.split(',')[0]} → {order.customerAddress.split(',')[0]}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Graph Representation */}
       {showGraph && optimization.graph && optimization.graph.nodes && (
         <div className="graph-section">
           <h3>📊 Graph Representation</h3>
@@ -113,7 +191,7 @@ const DijkstraVisualization = ({ optimizationResult, partners, orders }) => {
         </div>
       )}
 
-      {/* Algorithm Steps - FIXED: Added safety checks */}
+      {/* Algorithm Steps */}
       {optimization.steps && optimization.steps.length > 0 && (
         <div className="algorithm-steps">
           <h3>🚀 Algorithm Execution Steps</h3>
@@ -144,7 +222,7 @@ const DijkstraVisualization = ({ optimizationResult, partners, orders }) => {
         </div>
       )}
 
-      {/* Final Route - FIXED: Added safety checks */}
+      {/* Final Route */}
       {optimization.finalRoute && optimization.finalRoute.path && (
         <div className="final-route">
           <h3>🛣️ Optimized Route</h3>
@@ -196,7 +274,7 @@ const DijkstraVisualization = ({ optimizationResult, partners, orders }) => {
         </div>
       )}
 
-      {/* Constraint Violations - FIXED: Added safety checks */}
+      {/* Constraint Violations */}
       {optimization.constraints && optimization.constraints.violations && optimization.constraints.violations.length > 0 && (
         <div className="constraints-section">
           <h3>⚠️ Constraint Violations</h3>

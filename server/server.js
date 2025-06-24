@@ -49,7 +49,7 @@ app.get('/api/system/info', (req, res) => {
         ...stats,
         constraints: {
           maxPackagesPerPartner: 5,
-          maxDeliveryTimeMinutes: 30, // FIXED: Changed from 60 to 30
+          maxDeliveryTimeMinutes: 30,
           algorithmUsed: 'Dijkstra\'s Algorithm'
         },
         googleMapsEnabled: !!process.env.GOOGLE_MAPS_API_KEY
@@ -60,11 +60,8 @@ app.get('/api/system/info', (req, res) => {
 // Initialize demo data endpoint with EXACT coordinates
 app.post('/api/system/init-demo', async (req, res) => {
   try {
-    // Clear existing data
-    dataStore.partners = [];
-    dataStore.orders = [];
-    dataStore.nextPartnerId = 1;
-    dataStore.nextOrderId = 1;
+    // Clear existing data including optimizations
+    dataStore.clearAll();
 
     console.log('🧪 Initializing EXACT coordinate demo data...');
 
@@ -94,10 +91,10 @@ app.post('/api/system/init-demo', async (req, res) => {
         id: dataStore.nextPartnerId++,
         name: partnerData.name,
         phone: partnerData.phone,
-        currentLocation: partnerData.exactLocation, // Use exact coordinates
-        homeBase: partnerData.exactLocation,        // Use exact coordinates
+        currentLocation: partnerData.exactLocation,
+        homeBase: partnerData.exactLocation,
         status: 'AVAILABLE',
-        maxPackages: 5, // Fixed constraint
+        maxPackages: 5,
         maxDeliveryTime: 60 * 60, // 60 minutes in seconds
         createdAt: new Date()
       };
@@ -111,40 +108,40 @@ app.post('/api/system/init-demo', async (req, res) => {
         restaurantAddress: 'Restaurant A - Koramangala (12.854277, 77.657815)',
         customerAddress: 'Customer 1 - BTM Layout (12.850616, 77.647665)',
         exactRestaurantLocation: {
-          lat: 12.854277,  // EXACT coordinate from user
-          lng: 77.657815   // EXACT coordinate from user
+          lat: 12.854277,
+          lng: 77.657815
         },
         exactCustomerLocation: {
-          lat: 12.850616,  // EXACT coordinate from user
-          lng: 77.647665   // EXACT coordinate from user
+          lat: 12.850616,
+          lng: 77.647665
         },
         packageCount: 1,
         specialInstructions: 'Ring doorbell twice'
       },
       {
-        restaurantAddress: 'Restaurant A - Koramangala (12.854277, 77.657815)', // SAME as Order 1
+        restaurantAddress: 'Restaurant A - Koramangala (12.854277, 77.657815)',
         customerAddress: 'Customer 2 - HSR Layout (12.851118, 77.664016)',
         exactRestaurantLocation: {
-          lat: 12.854277,  // SAME restaurant as Order 1
-          lng: 77.657815   // SAME restaurant as Order 1
+          lat: 12.854277,
+          lng: 77.657815
         },
         exactCustomerLocation: {
-          lat: 12.851118,  // Different customer
-          lng: 77.664016   // Different customer
+          lat: 12.851118,
+          lng: 77.664016
         },
         packageCount: 1,
         specialInstructions: 'Call before delivery'
       },
       {
         restaurantAddress: 'Restaurant B - Indiranagar (12.850867, 77.653867)',
-        customerAddress: 'Customer 2 - HSR Layout (12.851118, 77.664016)', // SAME as Order 2
+        customerAddress: 'Customer 2 - HSR Layout (12.851118, 77.664016)',
         exactRestaurantLocation: {
-          lat: 12.850867,  // Different restaurant
-          lng: 77.653867   // Different restaurant
+          lat: 12.850867,
+          lng: 77.653867
         },
         exactCustomerLocation: {
-          lat: 12.851118,  // SAME customer as Order 2
-          lng: 77.664016   // SAME customer as Order 2
+          lat: 12.851118,
+          lng: 77.664016
         },
         packageCount: 1,
         specialInstructions: 'Leave at door'
@@ -153,12 +150,12 @@ app.post('/api/system/init-demo', async (req, res) => {
         restaurantAddress: 'Restaurant C - Jayanagar (12.845010, 77.646485)',
         customerAddress: 'Customer 3 - JP Nagar (12.845407, 77.660669)',
         exactRestaurantLocation: {
-          lat: 12.845010,  // Completely different
-          lng: 77.646485   // Completely different
+          lat: 12.845010,
+          lng: 77.646485
         },
         exactCustomerLocation: {
-          lat: 12.845407,  // Completely different
-          lng: 77.660669   // Completely different
+          lat: 12.845407,
+          lng: 77.660669
         },
         packageCount: 1,
         specialInstructions: 'Apartment 4B, 2nd floor'
@@ -171,8 +168,8 @@ app.post('/api/system/init-demo', async (req, res) => {
         id: dataStore.nextOrderId++,
         restaurantAddress: orderData.restaurantAddress,
         customerAddress: orderData.customerAddress,
-        restaurantLocation: orderData.exactRestaurantLocation, // Use EXACT coordinates
-        customerLocation: orderData.exactCustomerLocation,     // Use EXACT coordinates
+        restaurantLocation: orderData.exactRestaurantLocation,
+        customerLocation: orderData.exactCustomerLocation,
         packageCount: orderData.packageCount,
         specialInstructions: orderData.specialInstructions || '',
         status: 'PENDING',
@@ -187,7 +184,7 @@ app.post('/api/system/init-demo', async (req, res) => {
       console.log(`   Customer: (${order.customerLocation.lat}, ${order.customerLocation.lng}) - ${order.customerAddress}`);
     }
 
-    const stats = dataStore.getStats(); // Use getStats() instead of getDeliveryStats()
+    const stats = dataStore.getStats();
 
     console.log('\n🎯 EXACT coordinate demo data initialized successfully!');
     console.log(`Created ${stats.totalPartners} partners and ${stats.totalOrders} orders`);
@@ -248,35 +245,29 @@ app.post('/api/system/clear', (req, res) => {
   }
 });
 
-// Reset system endpoint - Fixed to properly reset all data
+// FIXED: Reset system endpoint - properly clear optimization data
 app.post('/api/system/reset', (req, res) => {
   try {
     console.log('🔄 Resetting system...');
     
-    // Reset all partners to available
-    const partners = dataStore.getPartners();
-    partners.forEach(partner => {
-      dataStore.updatePartner(partner.id, { status: 'AVAILABLE' });
-    });
+    // Count optimizations before clearing
+    const optimizationsBefore = Object.keys(dataStore.getAllOptimizations()).length;
+    
+    // Use the improved reset method that clears optimizations
+    dataStore.resetAssignments();
 
-    // Reset all orders to pending and unassign them
-    const orders = dataStore.getOrders();
-    orders.forEach(order => {
-      dataStore.updateOrder(order.id, {
-        status: 'PENDING',
-        assignedPartnerId: null
-      });
-    });
-
-    console.log(`✅ Reset completed: ${partners.length} partners, ${orders.length} orders`);
+    const stats = dataStore.getStats();
+    console.log(`✅ Reset completed: ${stats.totalPartners} partners, ${stats.totalOrders} orders`);
+    console.log(`📊 Cleared ${optimizationsBefore} stored optimization results`);
 
     res.json({
       success: true,
-      message: 'System reset successfully - all partners available, all orders pending',
+      message: 'System reset successfully - all partners available, all orders pending, optimization data cleared',
       data: {
-        partnersReset: partners.length,
-        ordersReset: orders.length,
-        stats: dataStore.getStats()
+        partnersReset: stats.totalPartners,
+        ordersReset: stats.totalOrders,
+        optimizationsCleared: optimizationsBefore,
+        stats: stats
       }
     });
   } catch (error) {
@@ -294,6 +285,7 @@ app.get('/api/debug/graph-data', (req, res) => {
   try {
     const partners = dataStore.getPartners();
     const orders = dataStore.getOrders();
+    const optimizations = dataStore.getAllOptimizations();
     
     const graphData = {
       nodes: [
@@ -330,6 +322,11 @@ app.get('/api/debug/graph-data', (req, res) => {
         orderId: o.id,
         partnerId: o.assignedPartnerId,
         status: o.status
+      })),
+      optimizations: Object.keys(optimizations).map(partnerId => ({
+        partnerId: parseInt(partnerId),
+        hasOptimization: true,
+        timestamp: optimizations[partnerId].timestamp
       }))
     };
 
@@ -341,6 +338,37 @@ app.get('/api/debug/graph-data', (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to get graph data',
+      error: error.message
+    });
+  }
+});
+
+// NEW: Debug endpoint to view stored optimizations
+app.get('/api/debug/optimizations', (req, res) => {
+  try {
+    const optimizations = dataStore.getAllOptimizations();
+    
+    res.json({
+      success: true,
+      data: {
+        count: Object.keys(optimizations).length,
+        optimizations: Object.keys(optimizations).map(partnerId => {
+          const opt = optimizations[partnerId];
+          return {
+            partnerId: parseInt(partnerId),
+            partnerName: opt.partnerName,
+            totalOrders: opt.totalOrders,
+            timestamp: opt.timestamp,
+            hasSteps: opt.steps ? opt.steps.length : 0,
+            hasRoute: opt.finalRoute ? opt.finalRoute.path.length : 0
+          };
+        })
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get optimizations data',
       error: error.message
     });
   }
@@ -382,13 +410,14 @@ app.listen(PORT, () => {
   console.log('\n📋 System Configuration:');
   console.log(`   Algorithm: Dijkstra's Algorithm for Route Optimization`);
   console.log(`   Max packages per partner: 5`);
-  console.log(`   Max delivery time: 60 minutes`);
+  console.log(`   Max delivery time: 30 minutes`);
   console.log(`   Google Maps API: ${process.env.GOOGLE_MAPS_API_KEY ? '✅ Configured' : '❌ Not configured (using fallback)'}`);
   
   console.log('\n🎯 Quick Start:');
   console.log('   1. Initialize demo data: POST /api/system/init-demo');
   console.log('   2. Optimize routes: POST /api/orders/optimize-route');
   console.log('   3. View optimization steps for educational purposes!');
+  console.log('   4. Click on assigned partners to view their stored optimization details!');
 });
 
 module.exports = app;

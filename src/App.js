@@ -13,6 +13,8 @@ function App() {
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState({});
   const [optimizationResult, setOptimizationResult] = useState(null);
+  const [selectedPartnerOptimization, setSelectedPartnerOptimization] = useState(null);
+  const [viewingPartnerId, setViewingPartnerId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null);
   
@@ -49,6 +51,10 @@ function App() {
       setLoading(true);
       const result = await apiService.initDemoData();
       showNotification('Demo data initialized successfully!', 'success');
+      // Clear any existing optimization views when resetting data
+      setOptimizationResult(null);
+      setSelectedPartnerOptimization(null);
+      setViewingPartnerId(null);
       await loadAllData();
     } catch (error) {
       showNotification('Failed to initialize demo data: ' + error.message, 'error');
@@ -64,6 +70,8 @@ function App() {
       setLoading(true);
       await apiService.resetSystem();
       setOptimizationResult(null);
+      setSelectedPartnerOptimization(null);
+      setViewingPartnerId(null);
       showNotification('System reset successfully!', 'success');
       await loadAllData();
     } catch (error) {
@@ -78,6 +86,8 @@ function App() {
       setLoading(true);
       const result = await apiService.optimizeRoute(partnerId, orderIds);
       setOptimizationResult(result.data);
+      setSelectedPartnerOptimization(null); // Clear individual partner view
+      setViewingPartnerId(null);
       showNotification('Route optimization completed!', 'success');
       await loadAllData();
     } catch (error) {
@@ -92,10 +102,41 @@ function App() {
       setLoading(true);
       const result = await apiService.autoAssignOrders();
       setOptimizationResult(result.data);
+      setSelectedPartnerOptimization(null); // Clear individual partner view
+      setViewingPartnerId(null);
       showNotification(`Auto assignment completed! ${result.message}`, 'success');
       await loadAllData();
     } catch (error) {
       showNotification('Auto assignment failed: ' + error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // NEW: Handle partner click to view their optimization
+  const handlePartnerClick = async (partnerId) => {
+    try {
+      setLoading(true);
+      const result = await apiService.getOptimizationDetails(partnerId);
+      
+      if (result.data && result.data.optimization) {
+        setSelectedPartnerOptimization(result.data);
+        setViewingPartnerId(partnerId);
+        setOptimizationResult(null); // Clear global optimization view
+        
+        const partner = partners.find(p => p.id === partnerId);
+        showNotification(`Viewing optimization details for ${partner?.name || 'Partner'}`, 'info');
+      } else {
+        const partner = partners.find(p => p.id === partnerId);
+        if (result.data && result.data.needsOptimization) {
+          showNotification(`${partner?.name || 'This partner'} has assigned orders but no stored optimization data. The optimization may have been lost after a system restart.`, 'warning');
+        } else {
+          showNotification(`No optimization data found for ${partner?.name || 'this partner'}. Try running auto-assign or manual optimization first.`, 'warning');
+        }
+      }
+    } catch (error) {
+      console.error('Partner optimization fetch error:', error);
+      showNotification('Failed to load partner optimization: ' + error.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -136,6 +177,13 @@ function App() {
 
   const pendingOrders = orders.filter(order => order.status === 'PENDING');
   const availablePartners = partners.filter(partner => partner.status === 'AVAILABLE');
+
+  // Determine which optimization data to show
+  const currentOptimizationResult = selectedPartnerOptimization ? 
+    { data: selectedPartnerOptimization } : optimizationResult;
+  
+  const viewingPartner = viewingPartnerId ? 
+    partners.find(p => p.id === viewingPartnerId) : null;
 
   return (
     <div className="App">
@@ -230,7 +278,10 @@ function App() {
             loading={loading}
           />
           
-          <PartnersList partners={partners} />
+          <PartnersList 
+            partners={partners} 
+            onPartnerClick={handlePartnerClick}
+          />
           
           <OrdersList orders={pendingOrders} />
         </div>
@@ -238,9 +289,14 @@ function App() {
         {/* Right Panel: Dijkstra Visualization */}
         <div className="right-panel">
           <DijkstraVisualization 
-            optimizationResult={optimizationResult}
+            optimizationResult={currentOptimizationResult}
             partners={partners}
             orders={orders}
+            viewingPartner={viewingPartner}
+            onClearView={() => {
+              setSelectedPartnerOptimization(null);
+              setViewingPartnerId(null);
+            }}
           />
         </div>
       </div>

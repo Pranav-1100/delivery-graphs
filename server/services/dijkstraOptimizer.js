@@ -23,11 +23,9 @@ class DijkstraOptimizer {
         }
       };
   
-      // Step 1: Check basic constraints
-      const constraintCheck = await this.checkConstraints(partner, orders);
+      // Step 1: Check basic constraints - FIXED: Don't check partner status for stored optimizations
+      const constraintCheck = await this.checkConstraints(partner, orders, true); // Skip status check
       
-      // FIXED: Don't add violations to steps if constraints are actually valid
-      // Only add constraint check failed if we're actually going to fail
       if (!constraintCheck.isValid) {
         optimizationResult.constraints.violations = constraintCheck.violations;
         optimizationResult.steps.push({
@@ -40,7 +38,6 @@ class DijkstraOptimizer {
         return optimizationResult;
       }
   
-      // FIXED: Only add success step if constraints actually passed
       optimizationResult.steps.push({
         step: 1,
         action: 'CONSTRAINT_CHECK_PASSED',
@@ -83,8 +80,8 @@ class DijkstraOptimizer {
     }
   }  
 
-  // Check partner and order constraints
-  checkConstraints(partner, orders) {
+  // Check partner and order constraints - FIXED: Add skipStatusCheck parameter
+  checkConstraints(partner, orders, skipStatusCheck = false) {
     const violations = [];
     let isValid = true;
 
@@ -95,8 +92,8 @@ class DijkstraOptimizer {
       isValid = false;
     }
 
-    // Check if partner is available
-    if (partner.status !== 'AVAILABLE') {
+    // Check if partner is available (skip for stored optimizations)
+    if (!skipStatusCheck && partner.status !== 'AVAILABLE') {
       violations.push(`Partner not available: status is ${partner.status}`);
       isValid = false;
     }
@@ -420,11 +417,11 @@ class DijkstraOptimizer {
       totalTime,
       totalDistance,
       totalStops: path.length,
-      isOptimal: totalTime <= 30 * 60 // Check 60-minute constraint
+      isOptimal: totalTime <= 30 * 60 // Check 30-minute constraint
     };
   }
 
-  // Simple estimation method for delivery time (add this to the class)
+  // Simple estimation method for delivery time
   estimateDeliveryTime(partner, orders) {
     const googleMaps = require('../utils/googleMaps');
     
@@ -466,10 +463,8 @@ class DijkstraOptimizer {
     console.log(`   Total distance: ${totalDistance.toFixed(2)} km`);
     
     // IMPROVED: More realistic time estimation for Bangalore traffic
-    // - Average speed: 20 km/h in city traffic (slower than 30 km/h due to traffic)
-    // - Stop time: 3 minutes per pickup + 2 minutes per delivery
     const averageSpeedKmh = 20; // Realistic city speed with traffic
-    const travelTimeSeconds = (totalDistance / averageSpeedKmh) * 3600; // Convert to seconds
+    const travelTimeSeconds = (totalDistance / averageSpeedKmh) * 3600;
     
     const pickupTimeSeconds = orders.length * 3 * 60; // 3 minutes per pickup
     const deliveryTimeSeconds = orders.length * 2 * 60; // 2 minutes per delivery
@@ -485,8 +480,8 @@ class DijkstraOptimizer {
     return totalTimeSeconds;
   }
   
-  // Also add this method to check constraints without full optimization
-  async checkConstraints(partner, orders) {
+  // Enhanced constraint checking for optimization
+  async checkConstraints(partner, orders, skipStatusCheck = false) {
     const violations = [];
     let isValid = true;
   
@@ -500,22 +495,21 @@ class DijkstraOptimizer {
       isValid = false;
     }
   
-    // Check if partner is available
-    if (partner.status !== 'AVAILABLE') {
+    // Check if partner is available (skip for stored optimizations)
+    if (!skipStatusCheck && partner.status !== 'AVAILABLE') {
       violations.push(`Partner not available: status is ${partner.status}`);
       isValid = false;
     }
   
-    // IMPROVED: More realistic time estimation 
+    // Time estimation 
     const estimatedTime = this.estimateDeliveryTime(partner, orders);
     const maxTimeMinutes = Math.round(partner.maxDeliveryTime / 60);
     const estimatedTimeMinutes = Math.round(estimatedTime / 60);
     
     console.log(`⏱️ Time check: ${estimatedTimeMinutes} min (estimated) vs ${maxTimeMinutes} min (max)`);
     
-    // FIXED: Be more lenient with time estimation since it's just an estimate
-    // Allow up to 10% over the limit for estimation inaccuracies
-    const timeBuffer = partner.maxDeliveryTime * 1.1; // 10% buffer
+    // Allow 10% buffer for estimation inaccuracies
+    const timeBuffer = partner.maxDeliveryTime * 1.1;
     if (estimatedTime > timeBuffer) {
       violations.push(`Estimated delivery time significantly exceeded: ${estimatedTimeMinutes} min > ${maxTimeMinutes} min (with 10% buffer)`);
       isValid = false;
@@ -528,9 +522,8 @@ class DijkstraOptimizer {
   
     return { isValid, violations, estimatedTime };
   }
-  
 
-  // Simple assignment method to assign multiple orders to best partner
+  // FIXED: Enhanced assignment method that stores optimization results
   async assignOrdersToPartner(orderIds, partnerId) {
     const dataStore = require('../models/dataStore');
     
@@ -547,7 +540,7 @@ class DijkstraOptimizer {
       // Run Dijkstra optimization
       const optimizationResult = await this.optimizeRoute(partner, orders);
       
-      // FIXED: Check the correct path for violations
+      // Check for violations
       if (optimizationResult.constraints && optimizationResult.constraints.violations && optimizationResult.constraints.violations.length > 0) {
         console.log(`❌ Constraint violations found:`, optimizationResult.constraints.violations);
         return {

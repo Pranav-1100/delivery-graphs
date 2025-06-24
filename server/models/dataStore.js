@@ -2,6 +2,7 @@ class DataStore {
   constructor() {
     this.partners = [];
     this.orders = [];
+    this.optimizations = {}; 
     this.nextPartnerId = 1;
     this.nextOrderId = 1;
   }
@@ -14,10 +15,10 @@ class DataStore {
       phone: partnerData.phone,
       currentLocation: partnerData.startLocation,
       homeBase: partnerData.startLocation,
-      status: 'AVAILABLE', // AVAILABLE, ASSIGNED
+      status: 'AVAILABLE',
       maxPackages: parseInt(process.env.MAX_PACKAGES_PER_PARTNER) || 5,
-      maxDeliveryTime: (parseInt(process.env.MAX_DELIVERY_TIME_MINUTES) || 30) * 60, // 30 minutes in seconds - FIXED
-      maxWorkingTime: (parseInt(process.env.MAX_PARTNER_WORKING_TIME_MINUTES) || 30) * 60, // 30 minutes in seconds - FIXED
+      maxDeliveryTime: (parseInt(process.env.MAX_DELIVERY_TIME_MINUTES) || 30) * 60,
+      maxWorkingTime: (parseInt(process.env.MAX_PARTNER_WORKING_TIME_MINUTES) || 30) * 60,
       createdAt: new Date()
     };
     this.partners.push(partner);
@@ -51,7 +52,7 @@ class DataStore {
       customerLocation: orderData.customerLocation,
       packageCount: orderData.packageCount,
       specialInstructions: orderData.specialInstructions || '',
-      status: 'PENDING', // PENDING, ASSIGNED, OPTIMIZED
+      status: 'PENDING',
       assignedPartnerId: null,
       createdAt: new Date()
     };
@@ -91,12 +92,64 @@ class DataStore {
     return this.orders.filter(o => o.status === 'PENDING');
   }
 
+  // NEW: Optimization Results Storage
+  storeOptimizationResult(partnerId, optimizationData) {
+    const partnerIdNum = parseInt(partnerId);
+    this.optimizations[partnerIdNum] = {
+      ...optimizationData,
+      timestamp: new Date(),
+      partnerId: partnerIdNum
+    };
+    console.log(`📊 Stored optimization result for partner ${partnerIdNum}`);
+  }
+
+  getOptimizationResult(partnerId) {
+    const partnerIdNum = parseInt(partnerId);
+    const result = this.optimizations[partnerIdNum];
+    if (result) {
+      console.log(`📊 Retrieved stored optimization for partner ${partnerIdNum}`);
+      return result;
+    }
+    console.log(`📊 No stored optimization found for partner ${partnerIdNum}`);
+    return null;
+  }
+
+  clearOptimizationResult(partnerId) {
+    const partnerIdNum = parseInt(partnerId);
+    delete this.optimizations[partnerIdNum];
+    console.log(`📊 Cleared optimization result for partner ${partnerIdNum}`);
+  }
+
+  getAllOptimizations() {
+    return this.optimizations;
+  }
+
   // Reset all data
   clearAll() {
     this.partners = [];
     this.orders = [];
+    this.optimizations = {}; // Clear optimizations too
     this.nextPartnerId = 1;
     this.nextOrderId = 1;
+  }
+
+  // Reset assignments but keep partners and orders
+  resetAssignments() {
+    // Reset all partners to available
+    this.partners.forEach(partner => {
+      partner.status = 'AVAILABLE';
+    });
+
+    // Reset all orders to pending and unassign them
+    this.orders.forEach(order => {
+      order.status = 'PENDING';
+      order.assignedPartnerId = null;
+    });
+
+    // Clear all optimization results
+    this.optimizations = {};
+    
+    console.log('🔄 Reset all assignments and cleared optimization results');
   }
 
   // Get system stats
@@ -106,7 +159,8 @@ class DataStore {
       availablePartners: this.getAvailablePartners().length,
       totalOrders: this.orders.length,
       pendingOrders: this.getPendingOrders().length,
-      assignedOrders: this.orders.filter(o => o.status === 'ASSIGNED').length
+      assignedOrders: this.orders.filter(o => o.status === 'ASSIGNED').length,
+      optimizationsStored: Object.keys(this.optimizations).length
     };
   }
 
