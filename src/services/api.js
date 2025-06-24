@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE = process.env.NODE_ENV === 'production' ? '/api' : 'https://graphs.trou.hackclub.app/api';
+// FIXED: Point to your actual backend URL
+const API_BASE = process.env.NODE_ENV === 'production' 
+  ? 'https://graphs.trou.hackclub.app/api'  // Your actual backend
+  : 'http://localhost:3000/api';
 
 class ApiService {
   constructor() {
@@ -8,23 +11,99 @@ class ApiService {
       baseURL: API_BASE,
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      timeout: 10000 // 10 second timeout
     });
 
     // Add response interceptor for error handling
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
-        console.error('API Error:', error);
-        throw new Error(error.response?.data?.message || error.message || 'API request failed');
+        console.error('API Error Details:', {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          config: {
+            method: error.config?.method,
+            url: error.config?.url,
+            baseURL: error.config?.baseURL
+          }
+        });
+
+        // Create more descriptive error messages
+        let errorMessage = 'API request failed';
+        
+        if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
+          errorMessage = `Cannot connect to backend server at ${API_BASE}. Make sure the server is running.`;
+        } else if (error.code === 'ECONNABORTED') {
+          errorMessage = 'Request timeout - server took too long to respond';
+        } else if (error.response) {
+          // Server responded with error status
+          const status = error.response.status;
+          const serverMessage = error.response.data?.message || error.response.statusText;
+          
+          switch (status) {
+            case 404:
+              errorMessage = `API endpoint not found: ${error.config?.url}`;
+              break;
+            case 500:
+              errorMessage = `Server error: ${serverMessage}`;
+              break;
+            case 400:
+              errorMessage = `Bad request: ${serverMessage}`;
+              break;
+            default:
+              errorMessage = `HTTP ${status}: ${serverMessage}`;
+          }
+        } else if (error.request) {
+          // Request was made but no response received
+          errorMessage = `No response from server at ${API_BASE}. Check if backend is running and accessible.`;
+        }
+
+        const enhancedError = new Error(errorMessage);
+        enhancedError.originalError = error;
+        enhancedError.isNetworkError = error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK';
+        
+        throw enhancedError;
+      }
+    );
+
+    // Add request interceptor for debugging
+    this.client.interceptors.request.use(
+      (config) => {
+        console.log(`API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+        return config;
+      },
+      (error) => {
+        console.error('Request setup error:', error);
+        return Promise.reject(error);
       }
     );
   }
 
   // System endpoints
   async getSystemInfo() {
-    const response = await this.client.get('/system/info');
-    return response.data;
+    try {
+      const response = await this.client.get('/system/info');
+      return response.data;
+    } catch (error) {
+      // Provide fallback data for offline mode
+      if (error.isNetworkError) {
+        console.warn('Using fallback system info due to network error');
+        return {
+          success: true,
+          data: {
+            totalPartners: 0,
+            availablePartners: 0,
+            totalOrders: 0,
+            pendingOrders: 0,
+            assignedOrders: 0
+          }
+        };
+      }
+      throw error;
+    }
   }
 
   async initDemoData() {
@@ -44,8 +123,16 @@ class ApiService {
 
   // Partners endpoints
   async getPartners() {
-    const response = await this.client.get('/partners');
-    return response.data;
+    try {
+      const response = await this.client.get('/partners');
+      return response.data;
+    } catch (error) {
+      if (error.isNetworkError) {
+        console.warn('Using empty partners array due to network error');
+        return { success: true, data: [], count: 0 };
+      }
+      throw error;
+    }
   }
 
   async getPartner(id) {
@@ -75,8 +162,16 @@ class ApiService {
 
   // Orders endpoints
   async getOrders() {
-    const response = await this.client.get('/orders');
-    return response.data;
+    try {
+      const response = await this.client.get('/orders');
+      return response.data;
+    } catch (error) {
+      if (error.isNetworkError) {
+        console.warn('Using empty orders array due to network error');
+        return { success: true, data: [], count: 0 };
+      }
+      throw error;
+    }
   }
 
   async getOrder(id) {
@@ -132,8 +227,35 @@ class ApiService {
   }
 
   async getHealthCheck() {
-    const response = await this.client.get('/health');
-    return response.data;
+    try {
+      const response = await this.client.get('/health');
+      return response.data;
+    } catch (error) {
+      throw new Error(`Health check failed: ${error.message}`);
+    }
+  }
+
+  // Test connection method
+  async testConnection() {
+    try {
+      const response = await this.client.get('/health');
+      return {
+        connected: true,
+        message: 'Backend connection successful',
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        connected: false,
+        message: error.message,
+        error: error
+      };
+    }
+  }
+
+  // Get current API base URL
+  getApiBaseUrl() {
+    return API_BASE;
   }
 
   // Utility methods
